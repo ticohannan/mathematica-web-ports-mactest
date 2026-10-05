@@ -1,0 +1,8 @@
+{
+  "name": "mathematica-web-ports-probe-harness",
+  "private": true,
+  "type": "module",
+  "description": "Investigation harness for testing mathematica-web-ports in other browsers (see README.md). No dependencies.",
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,104 @@
+# SPDX-FileCopyrightText: 2026 Tico Hannan
+# SPDX-License-Identifier: MIT
+# prototype/github-actions/macos-browsers.yml — INVESTIGATION CODE, NOT RUN YET.
+# For a SEPARATE public repository that contains only the prototype/ folder (MACVM-GHA, GHA-S01..S06),
+# so the main repository is not changed. Copy this file to .github/workflows/macos-browsers.yml there.
+# It checks out ticohannan/mathematica-web-ports at the ref you choose and tests it on GitHub-hosted
+# macOS runners (real Apple hardware; free for public repositories): Safari, Chrome and Firefox over
+# WebDriver with run-suite.mjs, plus the repository's own Playwright WebKit tests.
+name: macOS browsers (investigation)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "mathematica-web-ports ref to test (tag, branch or commit)"
+        required: true
+        default: "main"
+
+permissions:
+  contents: read
+
+jobs:
+  webdriver:
+    name: "${{ matrix.browser }} on ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26, macos-15-intel, macos-26-intel]
+        browser: [safari, chrome, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ticohannan/mathematica-web-ports
+          ref: ${{ inputs.ref }}
+          path: site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Machine facts
+        run: |
+          mkdir -p out
+          { sw_vers; uname -m; sysctl -n machdep.cpu.brand_string hw.ncpu hw.memsize; df -h / | tail -1;
+            system_profiler SPDisplaysDataType | grep -E "Chipset|Metal|VRAM" || true;
+            defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString || true; } | tee out/machine.txt
+      - name: Node reference (V8)
+        run: node prototype/node-reference.mjs --repo site --out out/reference-node.json
+      - name: Start probe server
+        run: |
+          nohup node prototype/probe-server.mjs --repo site --port 8090 --reports out/posted > out/probe-server.log 2>&1 &
+          sleep 2
+          curl -fsS http://127.0.0.1:8090/index.html > /dev/null
+      - name: Start WebDriver
+        run: |
+          case "${{ matrix.browser }}" in
+            safari)  sudo safaridriver --enable; nohup safaridriver -p 4444 > out/driver.log 2>&1 & ;;
+            chrome)  nohup chromedriver --port=4444 > out/driver.log 2>&1 & ;;
+            firefox) nohup geckodriver --port 4444 > out/driver.log 2>&1 & ;;
+          esac
+          sleep 3
+          curl -fsS http://127.0.0.1:4444/status
+      - name: Run suite
+        env:
+          LABEL: "${{ matrix.os }} (ref ${{ inputs.ref }})"   # via env, not inline, so the input is never parsed as shell
+        run: >
+          node prototype/run-suite.mjs --browser ${{ matrix.browser }}
+          --webdriver http://127.0.0.1:4444 --site http://127.0.0.1:8090
+          --reference out/reference-node.json --out out/${{ matrix.browser }}
+          --label "$LABEL"
+      - name: Job summary
+        if: always()
+        run: cat out/${{ matrix.browser }}/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: "${{ matrix.os }}-${{ matrix.browser }}"
+          path: out/
+
+  playwright-webkit:
+    name: "Playwright WebKit on ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ticohannan/mathematica-web-ports
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install webkit
+      - run: npx playwright test --project=webkit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: "playwright-webkit-${{ matrix.os }}"
+          path: test-output/
