@@ -39,7 +39,9 @@ const PRESETS = {
       args: ['--automation'],
     },
   },
-  chrome: { browserName: 'chrome' },
+  // Flags against renderer throttling/hangs in CI desktop sessions (macos-26-intel, 2026-10-05).
+  chrome: { browserName: 'chrome', 'goog:chromeOptions': { args: ['--no-first-run', '--no-default-browser-check', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling'] } },
+  'chrome-headless': { browserName: 'chrome', 'goog:chromeOptions': { args: ['--headless=new', '--no-first-run', '--window-size=1100,900'] } },
   firefox: { browserName: 'firefox' },
 };
 const caps = opt('caps', null) ? JSON.parse(opt('caps')) : PRESETS[browser];
@@ -62,16 +64,37 @@ const DEMOS = [
 ];
 
 let wd;
+let dead = false; // set when the driver stops answering; remaining checks are skipped, not hung
+async function guard(id, fn) {
+  if (dead) { record({ id, status: 'skip', note: 'skipped: browser/driver stopped answering earlier' }); return; }
+  const t = Date.now();
+  try { await fn(); } catch (e) {
+    record({ id, status: 'fail', ms: Date.now() - t, note: `aborted: ${e.message}` });
+    if (e.transport) dead = true;
+    else await wd.navigate('about:blank').catch(() => { dead = true; });
+  }
+}
+async function newSessionWithRetry(attempts = 3) {
+  // safaridriver on a freshly booted CI Mac can time out "finding or launching a compatible local
+  // Safari" on the first try (macos-26-intel, 2026-10-05); retrying is the usual remedy.
+  for (let i = 1; ; i++) {
+    try { return await WebDriver.newSession(wdUrl, caps); } catch (e) {
+      console.log(`session attempt ${i}/${attempts} failed: ${e.message.slice(0, 200)}`);
+      if (i >= attempts) throw e;
+      await new Promise((r) => setTimeout(r, 15000));
+    }
+  }
+}
 try {
   const t0 = Date.now();
-  wd = await WebDriver.newSession(wdUrl, caps);
+  wd = await newSessionWithRetry();
   const caps2 = wd.capabilities || {};
   record({ id: 'session', status: 'pass', ms: Date.now() - t0, note: `${caps2.browserName || '?'} ${caps2.browserVersion || ''} on ${caps2.platformName || '?'}` });
   await wd.setTimeouts({ script: 180000, pageLoad: 60000 }).catch(() => {});
   await wd.setWindowRect({ width: 1100, height: 900 }).catch(() => {});
 
   // 1. Landing page
-  {
+  await guard('index', async () => {
     const t = Date.now();
     await wd.navigate(`${site}/index.html`);
     await wd.waitFor("document.readyState === 'complete'", 15000);
@@ -79,11 +102,11 @@ try {
     const p = await probeState(wd);
     const problems = problemsOf(p);
     record({ id: 'index', status: links >= 3 && !problems.length ? 'pass' : 'fail', ms: Date.now() - t, note: `${links} demo links${problems.length ? '; ' + problems.join(' | ') : ''}`, ua: p && p.ua, webgl: p && p.webgl });
-  }
+  });
 
   // 2. Each demo page: loads, becomes ready, no uncaught errors; WebGL facts recorded
   const ready = {};
-  for (const d of DEMOS) {
+  for (const d of DEMOS) await guard(`load:${d.id}`, async () => {
     const t = Date.now();
     await wd.navigate(`${site}/demos/${d.id}/`);
     // Stop waiting as soon as the page is ready OR has thrown (e.g. no WebGL), so a failing page
@@ -99,10 +122,10 @@ try {
     if (status === 'fail' && d.needsWebGL && gl && !gl.webgl) { status = 'expected-fail'; note += ' — page needs WebGL, browser has none (see MACVM-OVR, OVR-F04)'; }
     if (problems.length) note += `; errors: ${problems.join(' | ').slice(0, 400)}`;
     record({ id: `load:${d.id}`, status, ms: Date.now() - t, note, webgl: gl, shot: await shot(wd, `load-${d.id}`) });
-  }
+  });
 
   // 3. Motion planning interactions (real input events, not __demo.setState)
-  if (ready['motion-planning']) {
+  if (ready['motion-planning']) await guard('mp:interactions', async () => {
     await wd.navigate(`${site}/demos/motion-planning/`);
     await wd.waitFor('window.__demo && window.__demo.ready === true', 20000);
     // 3a mouse drag of the goal locator r2 (pointer events + setPointerCapture on SVG <g>)
@@ -158,12 +181,12 @@ try {
       } catch (e) { note = e.message; }
       record({ id: 'mp:svg-geometry', status, ms: Date.now() - t, note });
     }
-  } else {
+  }); else {
     record({ id: 'mp:interactions', status: 'skip', note: 'motion-planning page did not become ready' });
   }
 
   // 4. In-browser golden checks + engine fingerprint (pure model code, CPU only)
-  {
+  await guard('parity', async () => {
     const t = Date.now();
     await wd.navigate(`${site}/__probe/parity.html`);
     const w = await wd.waitFor('window.__parity && window.__parity.done', 180000, 250);
@@ -194,7 +217,7 @@ try {
         record({ id: 'parity:fingerprint', status: 'info', note: par.fingerprint.overall });
       }
     }
-  }
+  });
 } catch (e) {
   record({ id: 'harness', status: 'fail', note: e.stack || e.message });
 } finally {

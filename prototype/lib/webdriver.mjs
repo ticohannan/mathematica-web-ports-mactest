@@ -12,14 +12,25 @@ export class WebDriverError extends Error {
 }
 
 export class WebDriver {
+  static timeoutMs = Number(process.env.WD_TIMEOUT_MS || 120000);
   constructor(base, sessionId) { this.base = base.replace(/\/$/, ''); this.id = sessionId; }
 
-  static async raw(base, method, path, body) {
-    const r = await fetch(base.replace(/\/$/, '') + path, {
-      method,
-      headers: body === undefined ? {} : { 'Content-Type': 'application/json; charset=utf-8' },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+  static async raw(base, method, path, body, timeoutMs = WebDriver.timeoutMs) {
+    // Every command has a deadline, so a hung browser fails one check instead of the whole run
+    // (seen on GitHub's macos-26-intel: chromedriver never answered a navigation, 2026-10-05).
+    let r;
+    try {
+      r = await fetch(base.replace(/\/$/, '') + path, {
+        method,
+        headers: body === undefined ? {} : { 'Content-Type': 'application/json; charset=utf-8' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (e) {
+      const err = new WebDriverError(`${method} ${path}`, { error: e.name === 'TimeoutError' ? 'client timeout' : 'connection failed', message: `${e.message} (after at most ${timeoutMs / 1000} s)` });
+      err.transport = true;
+      throw err;
+    }
     const text = await r.text();
     let json;
     try { json = JSON.parse(text); } catch { json = { value: { error: `HTTP ${r.status}`, message: text.slice(0, 300) } }; }
@@ -30,7 +41,7 @@ export class WebDriver {
   static async status(base) { return WebDriver.raw(base, 'GET', '/status'); }
 
   static async newSession(base, alwaysMatch) {
-    const v = await WebDriver.raw(base, 'POST', '/session', { capabilities: { alwaysMatch } });
+    const v = await WebDriver.raw(base, 'POST', '/session', { capabilities: { alwaysMatch } }, 240000);
     const d = new WebDriver(base, v.sessionId);
     d.capabilities = v.capabilities;
     return d;

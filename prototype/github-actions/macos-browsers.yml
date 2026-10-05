@@ -1,11 +1,15 @@
 # SPDX-FileCopyrightText: 2026 Tico Hannan
 # SPDX-License-Identifier: MIT
-# prototype/github-actions/macos-browsers.yml — INVESTIGATION CODE, NOT RUN YET.
-# For a SEPARATE public repository that contains only the prototype/ folder (MACVM-GHA, GHA-S01..S06),
-# so the main repository is not changed. Copy this file to .github/workflows/macos-browsers.yml there.
-# It checks out ticohannan/mathematica-web-ports at the ref you choose and tests it on GitHub-hosted
-# macOS runners (real Apple hardware; free for public repositories): Safari, Chrome and Firefox over
-# WebDriver with run-suite.mjs, plus the repository's own Playwright WebKit tests.
+# prototype/github-actions/macos-browsers.yml — INVESTIGATION CODE (MACVM-GHA).
+# Lives in the SEPARATE public repository ticohannan/mathematica-web-ports-mactest as
+# .github/workflows/macos-browsers.yml, so the main repository is not changed. It checks out
+# ticohannan/mathematica-web-ports at the ref you choose and tests it on GitHub-hosted macOS runners
+# (real Apple hardware; free for public repositories): Safari, Chrome and Firefox over WebDriver with
+# run-suite.mjs, plus optionally the repository's own Playwright WebKit tests.
+#
+# v2 (2026-10-05), after the first run: choose ONE runner label and ONE browser per run (arm64 runners
+# were so short of capacity that 11 of 14 jobs were never picked up); at most 2 jobs at a time;
+# Safari is launched once before the WebDriver session; Node-24 versions of the actions.
 name: macOS browsers (investigation)
 
 on:
@@ -15,28 +19,44 @@ on:
         description: "mathematica-web-ports ref to test (tag, branch or commit)"
         required: true
         default: "main"
+      os:
+        description: "Runner label (one per run is kindest to the queue)"
+        type: choice
+        default: macos-26-intel
+        options: [macos-26-intel, macos-15-intel, macos-26, macos-15, all]
+      browser:
+        description: "Browser to drive over WebDriver"
+        type: choice
+        default: all
+        options: [all, safari, chrome, chrome-headless, firefox, none]
+      playwright_webkit:
+        description: "Also run the repository's own Playwright WebKit suite"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   webdriver:
+    if: ${{ inputs.browser != 'none' }}
     name: "${{ matrix.browser }} on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
-        os: [macos-15, macos-26, macos-15-intel, macos-26-intel]
-        browser: [safari, chrome, firefox]
+        os: ${{ fromJSON(inputs.os == 'all' && '["macos-26-intel","macos-15-intel","macos-26","macos-15"]' || format('["{0}"]', inputs.os)) }}
+        browser: ${{ fromJSON(inputs.browser == 'all' && '["safari","chrome","firefox"]' || format('["{0}"]', inputs.browser)) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           repository: ticohannan/mathematica-web-ports
           ref: ${{ inputs.ref }}
           path: site
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: Machine facts
@@ -52,12 +72,19 @@ jobs:
           nohup node prototype/probe-server.mjs --repo site --port 8090 --reports out/posted > out/probe-server.log 2>&1 &
           sleep 2
           curl -fsS http://127.0.0.1:8090/index.html > /dev/null
+      - name: Warm up Safari (first launch on a fresh VM is slow)
+        if: ${{ matrix.browser == 'safari' }}
+        run: |
+          open -a Safari || true
+          sleep 20
+          osascript -e 'quit app "Safari"' || true
+          sleep 5
       - name: Start WebDriver
         run: |
           case "${{ matrix.browser }}" in
-            safari)  sudo safaridriver --enable; nohup safaridriver -p 4444 > out/driver.log 2>&1 & ;;
-            chrome)  nohup chromedriver --port=4444 > out/driver.log 2>&1 & ;;
-            firefox) nohup geckodriver --port 4444 > out/driver.log 2>&1 & ;;
+            safari)            sudo safaridriver --enable; nohup safaridriver -p 4444 > out/driver.log 2>&1 & ;;
+            chrome|chrome-*)   nohup chromedriver --port=4444 --verbose --log-path=out/driver.log > /dev/null 2>&1 & ;;
+            firefox)           nohup geckodriver --port 4444 > out/driver.log 2>&1 & ;;
           esac
           sleep 3
           curl -fsS http://127.0.0.1:4444/status
@@ -72,32 +99,34 @@ jobs:
       - name: Job summary
         if: always()
         run: cat out/${{ matrix.browser }}/summary.md >> "$GITHUB_STEP_SUMMARY" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: "${{ matrix.os }}-${{ matrix.browser }}"
           path: out/
 
   playwright-webkit:
+    if: ${{ inputs.playwright_webkit }}
     name: "Playwright WebKit on ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
-        os: [macos-15, macos-26]
+        os: ${{ fromJSON(inputs.os == 'all' && '["macos-26-intel","macos-15-intel","macos-26","macos-15"]' || format('["{0}"]', inputs.os)) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: ticohannan/mathematica-web-ports
           ref: ${{ inputs.ref }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - run: npm ci
       - run: npx playwright install webkit
       - run: npx playwright test --project=webkit
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: "playwright-webkit-${{ matrix.os }}"
