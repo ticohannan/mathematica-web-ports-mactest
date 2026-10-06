@@ -16,7 +16,7 @@ licence MIT (see the SPDX header in each file).
 | `probe/fingerprint.js`, `probe/mathprobe.js` | The shared logic (runs unchanged in Node and in browsers). |
 | `node-reference.mjs` | Computes the same in Node (V8) as the reference. |
 | `lib/webdriver.mjs` | Minimal W3C WebDriver client (Node 18+ `fetch`). |
-| `run-suite.mjs` | Smoke + interaction + parity suite over WebDriver: page loads, real mouse drag, arrow key, setter click, SVG geometry, parity page; writes `report.json`, `summary.md`, screenshots. Presets: `safari`, `chrome`, `chrome-headless`, `firefox`, `webkitgtk`. Every WebDriver call has a deadline (`WD_TIMEOUT_MS`, default 120 s); a hung browser fails one check and the rest are skipped. |
+| `run-suite.mjs` | Smoke + interaction + parity suite over WebDriver: page loads, real mouse drag, arrow key, setter click, SVG geometry, parity page; writes `report.json`, `summary.md`, screenshots. Presets: `safari`, `chrome`, `chrome-headless`, `firefox`, `webkitgtk`; `--window WxH` (default 1100x900). For 3D pages it also reads back the WebGL canvas pixels (`render:` checks). Every WebDriver call has a deadline (`WD_TIMEOUT_MS`, default 120 s); a hung browser fails one check and the rest are skipped. |
 | `playwright-parity.mjs` | Opens the parity page in Playwright's Chromium/Firefox/WebKit (uses the checkout's own `@playwright/test`). |
 | `macos-guest/prepare-guest.sh` | One-time preparation of a macOS test machine: Safari WebDriver on, `safaridriver` at login on port 4444, no sleep/updates/indexing. |
 | `hosts/linux/run-mac-vm-tests.sh` | One disposable run against a macOS guest on QEMU/KVM (overlay disk, SSH tunnels, suite, power-off). |
@@ -35,6 +35,6 @@ Without WebDriver: open `http://127.0.0.1:8090/__probe/parity.html?report=1&name
 browser; the result is saved under `results/posted/`.
 
 ## Status
-Verified with WebKitGTK (WebKitWebDriver) and Chromium on Linux, and with Firefox 154 on a GitHub-hosted
-macOS 26 Intel runner (2026-10-05). Safari and Chrome on GitHub runners: v2 fixes not yet run. The VM
-scripts (hosts/, macos-guest/) have not been run.
+Verified with WebKitGTK (WebKitWebDriver) and Chromium on Linux, and on GitHub-hosted Macs
+(2026-10-05): Safari 26.6.2, Chrome 152 and Firefox 155 on macOS 26 arm64; Firefox 154 and Chrome 151 on
+macOS 26 Intel (Safari does not start there). The VM scripts (hosts/, macos-guest/) have not been run.

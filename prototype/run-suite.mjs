@@ -91,7 +91,8 @@ try {
   const caps2 = wd.capabilities || {};
   record({ id: 'session', status: 'pass', ms: Date.now() - t0, note: `${caps2.browserName || '?'} ${caps2.browserVersion || ''} on ${caps2.platformName || '?'}` });
   await wd.setTimeouts({ script: 180000, pageLoad: 60000 }).catch(() => {});
-  await wd.setWindowRect({ width: 1100, height: 900 }).catch(() => {});
+  const [winW, winH] = opt('window', '1100x900').split('x').map(Number); // --window WxH
+  await wd.setWindowRect({ width: winW, height: winH }).catch(() => {});
 
   // 1. Landing page
   await guard('index', async () => {
@@ -122,6 +123,14 @@ try {
     if (status === 'fail' && d.needsWebGL && gl && !gl.webgl) { status = 'expected-fail'; note += ' — page needs WebGL, browser has none (see MACVM-OVR, OVR-F04)'; }
     if (problems.length) note += `; errors: ${problems.join(' | ').slice(0, 400)}`;
     record({ id: `load:${d.id}`, status, ms: Date.now() - t, note, webgl: gl, shot: await shot(wd, `load-${d.id}`) });
+    // Does the WebGL canvas actually contain a picture? Read back by the page itself
+    // (window.__demo.inkFraction, gl.readPixels), because WebDriver screenshots in Safari showed the
+    // 3D canvas blank on macos-26 arm64 although the page was ready (run 2, 2026-10-05).
+    if (d.needsWebGL && isReady) {
+      const ink = await wd.execute('return window.__demo && window.__demo.inkFraction ? window.__demo.inkFraction() : null;').catch((e) => `error: ${e.message}`);
+      const ok = typeof ink === 'number' && ink > 0.005;
+      record({ id: `render:${d.id}`, status: ok ? 'pass' : 'fail', note: `non-background pixels in the WebGL canvas: ${typeof ink === 'number' ? (100 * ink).toFixed(2) + ' %' : ink} (Chromium reference ~5-14 %)` });
+    }
   });
 
   // 3. Motion planning interactions (real input events, not __demo.setState)
@@ -131,15 +140,20 @@ try {
     // 3a mouse drag of the goal locator r2 (pointer events + setPointerCapture on SVG <g>)
     {
       const t = Date.now();
+      // Scroll the locator into the middle of the viewport first: on arm64 runners the window's
+      // viewport was only 592 px high and r2 sat at y = 609 (run 2, 2026-10-05).
+      await wd.execute("document.querySelector('[data-testid=\"locator-r2\"]').scrollIntoView({ block: 'center', inline: 'center' });");
+      await new Promise((r) => setTimeout(r, 200));
       const before = await wd.execute('return window.__demo.getState().r2;');
       const pt = await wd.execute("return window.__demo.locatorClientPoint('r2');");
+      const vp = await wd.execute('return [window.innerWidth, window.innerHeight];');
       let status = 'fail'; let note = '';
       try {
         await wd.drag(pt.x, pt.y, 40, -30);
         const after = await wd.execute('return window.__demo.getState().r2;');
         const moved = after[0] > before[0] && after[1] > before[1]; // right on screen = +x; up on screen = +y (y-flip)
         status = moved ? 'pass' : 'fail';
-        note = `r2 ${JSON.stringify(before)} -> ${JSON.stringify(after)} (expect x up, y up)`;
+        note = `r2 ${JSON.stringify(before)} -> ${JSON.stringify(after)} (expect x up, y up); viewport ${vp.join('x')}`;
       } catch (e) { note = e.message; }
       record({ id: 'mp:drag-locator', status, ms: Date.now() - t, note, shot: await shot(wd, 'mp-after-drag') });
     }

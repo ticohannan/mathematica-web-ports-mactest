@@ -10,6 +10,8 @@
 # v2 (2026-10-05), after the first run: choose ONE runner label and ONE browser per run (arm64 runners
 # were so short of capacity that 11 of 14 jobs were never picked up); at most 2 jobs at a time;
 # Safari is launched once before the WebDriver session; Node-24 versions of the actions.
+# v3 (2026-10-05), after run 2: default runner macos-26 (arm64: the only one where Safari started and
+# WebGL exists); safaridriver --diagnose logs uploaded.
 name: macOS browsers (investigation)
 
 on:
@@ -22,8 +24,8 @@ on:
       os:
         description: "Runner label (one per run is kindest to the queue)"
         type: choice
-        default: macos-26-intel
-        options: [macos-26-intel, macos-15-intel, macos-26, macos-15, all]
+        default: macos-26
+        options: [macos-26, macos-15, macos-26-intel, macos-15-intel, all]
       browser:
         description: "Browser to drive over WebDriver"
         type: choice
@@ -82,7 +84,7 @@ jobs:
       - name: Start WebDriver
         run: |
           case "${{ matrix.browser }}" in
-            safari)            sudo safaridriver --enable; nohup safaridriver -p 4444 > out/driver.log 2>&1 & ;;
+            safari)            sudo safaridriver --enable; nohup safaridriver -p 4444 --diagnose > out/driver.log 2>&1 & ;;
             chrome|chrome-*)   nohup chromedriver --port=4444 --verbose --log-path=out/driver.log > /dev/null 2>&1 & ;;
             firefox)           nohup geckodriver --port 4444 > out/driver.log 2>&1 & ;;
           esac
@@ -99,6 +101,9 @@ jobs:
       - name: Job summary
         if: always()
         run: cat out/${{ matrix.browser }}/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Collect safaridriver diagnostics
+        if: ${{ always() && matrix.browser == 'safari' }}
+        run: cp -R ~/Library/Logs/com.apple.WebDriver out/safaridriver-logs 2>/dev/null || true
       - uses: actions/upload-artifact@v6
         if: always()
         with:
