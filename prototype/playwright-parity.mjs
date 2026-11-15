@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/playwright-parity.mjs — INVESTIGATION CODE. Opens /__probe/parity.html (from
 // probe-server.mjs) in Playwright's Chromium / Firefox / WebKit and compares the golden checks, the
 // engine fingerprint and the Math sample with the Node reference. Uses the @playwright/test that

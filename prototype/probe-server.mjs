@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/probe-server.mjs — INVESTIGATION CODE (see README.md). Zero dependencies.
 //
 // Serves a CHECKOUT of the repository (read-only; nothing in it is changed) the way tools/serve.mjs

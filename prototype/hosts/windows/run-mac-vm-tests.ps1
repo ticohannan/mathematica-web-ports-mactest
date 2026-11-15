@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Tico Hannan
-# SPDX-License-Identifier: MIT
-# prototype\hosts\windows\run-mac-vm-tests.ps1 - INVESTIGATION CODE, NOT RUN YET (no Windows,
-# VMware or PowerShell in the sandbox; not even syntax-checked). Read MACVM-WIN first (WIN-S01..S12).
+# SPDX-License-Identifier: BSD-3-Clause
+# prototype\hosts\windows\run-mac-vm-tests.ps1 - INVESTIGATION CODE, NOT RUN YET.
+# Read MACVM-WIN first (WIN-S01..S12).
 # One disposable run:
 #   1. revert the VM to its powered-off snapshot "clean" (taken after prepare-guest.sh)
 #   2. start it without a window

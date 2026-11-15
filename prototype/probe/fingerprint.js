@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/probe/fingerprint.js — INVESTIGATION CODE, not part of the app (see ../README.md).
 //
 // Runs the ports' pure model code (no DOM, no WebGL) and reduces every number it produces to a
