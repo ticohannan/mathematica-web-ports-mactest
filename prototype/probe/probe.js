@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/probe/probe.js — INVESTIGATION CODE. probe-server.mjs injects this classic script as the
 // first element of <head> of every HTML page it serves, so it runs before the page's modules and
 // records what WebDriver cannot read in Safari (safaridriver has no console-log endpoint):

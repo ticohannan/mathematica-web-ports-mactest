@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/run-suite.mjs — INVESTIGATION CODE (see README.md). Zero dependencies (Node 18+).
 //
 // A small cross-browser smoke + parity suite driven over W3C WebDriver, so it works with Safari

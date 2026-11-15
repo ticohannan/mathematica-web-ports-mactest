@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Tico Hannan
-# SPDX-License-Identifier: MIT
-# prototype/hosts/linux/run-mac-vm-tests.sh — INVESTIGATION CODE, NOT RUN YET (the authoring sandbox
-# has no /dev/kvm). Read MACVM-LNX first (steps LNX-S01...LNX-S12). One disposable test run:
+# SPDX-License-Identifier: BSD-3-Clause
+# prototype/hosts/linux/run-mac-vm-tests.sh — INVESTIGATION CODE, NOT RUN YET.
+# Read MACVM-LNX first (steps LNX-S01...LNX-S12). One disposable test run:
 #
 #   1. make a throw-away overlay disk on top of the prepared macOS base image (base stays clean)
 #   2. boot the guest headless (VNC on 127.0.0.1:5901 only, for watching/debugging)

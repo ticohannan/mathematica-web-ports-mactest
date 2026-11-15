@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Tico Hannan
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: BSD-3-Clause
 # prototype/github-actions/macos-browsers.yml — INVESTIGATION CODE (MACVM-GHA).
 # Lives in the SEPARATE public repository ticohannan/mathematica-web-ports-mactest as
 # .github/workflows/macos-browsers.yml, so the main repository is not changed. It checks out

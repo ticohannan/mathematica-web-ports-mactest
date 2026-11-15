@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/probe/parity.js — INVESTIGATION CODE. Runs the golden checks and the engine fingerprint
 // inside whatever browser opens /__probe/parity.html (served by ../probe-server.mjs next to a
 // checkout of the repository). Result: window.__parity (read by run-suite.mjs over WebDriver) and,

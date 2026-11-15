@@ -3,8 +3,8 @@
 Small, dependency-free tools for checking the mathematica-web-ports pages in browsers that the
 repository's Playwright suite cannot drive — above all **Safari**, through Apple's `safaridriver` — and
 for comparing the ports' model numerics between JavaScript engines. They serve a **checkout of the
-repository unchanged**; nothing here is part of the website. Produced with an AI code-generation tool;
-licence MIT (see the SPDX header in each file).
+repository unchanged**; nothing here is part of the website. Licence
+BSD-3-Clause (see LICENSE and the SPDX header in each file).
 
 ## Files
 

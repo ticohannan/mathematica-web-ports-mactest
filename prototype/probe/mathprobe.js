@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/probe/mathprobe.js — INVESTIGATION CODE. Evaluates the JavaScript Math functions the
 // ports use on 1,000 fixed inputs each and returns the exact result bits, so results from two
 // engines can be compared function by function (ECMAScript does not require these functions to be

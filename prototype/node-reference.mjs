@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/node-reference.mjs — INVESTIGATION CODE. Computes the golden checks and the engine
 // fingerprint in Node (V8) for a checkout of the repository, as the reference that browser runs
 // (run-suite.mjs --reference FILE) are compared with.

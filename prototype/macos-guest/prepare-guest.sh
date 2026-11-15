@@ -1,8 +1,8 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: 2026 Tico Hannan
-# SPDX-License-Identifier: MIT
-# prototype/macos-guest/prepare-guest.sh — INVESTIGATION CODE, NOT RUN YET (no macOS was
-# available). Run ONCE inside a freshly installed macOS guest, logged in as the test account, from
+# SPDX-License-Identifier: BSD-3-Clause
+# prototype/macos-guest/prepare-guest.sh — INVESTIGATION CODE, NOT RUN YET.
+# Run ONCE inside a freshly installed macOS guest, logged in as the test account, from
 # Terminal or over SSH, BEFORE the base image is frozen (MACVM-LNX LNX-S10 / MACVM-WIN WIN-S09).
 # Each step prints what it did; if one fails, the rest still run. Check the printout.
 #

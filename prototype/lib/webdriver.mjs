@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 Tico Hannan
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 // prototype/lib/webdriver.mjs — INVESTIGATION CODE. Minimal W3C WebDriver (classic) client using
 // Node's built-in fetch (Node 18+); no dependencies. Covers only what run-suite.mjs needs. Works
 // with safaridriver (Safari), WebKitWebDriver (WebKitGTK), chromedriver and geckodriver.
